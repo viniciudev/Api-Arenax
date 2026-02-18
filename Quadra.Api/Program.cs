@@ -13,8 +13,12 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDIServices(builder.Configuration);
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables(); 
+builder.Services.AddDIServices(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddSingleton<IJWTManager, JWTManager>();
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);

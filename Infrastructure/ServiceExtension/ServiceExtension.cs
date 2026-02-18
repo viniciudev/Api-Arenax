@@ -3,19 +3,38 @@ using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.ServiceExtension
 {
     public static class ServiceExtension
     {
-        public static IServiceCollection AddDIServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection 
+            AddDIServices(this IServiceCollection services, IConfiguration configuration,
+            IHostEnvironment environment)
         {
+            string connectionString;
+
+            // Verifica se está em produção
+            if (environment.IsProduction())
+            {
+                // Em produção, usa a DATABASE_URL do Digital Ocean App Platform
+                connectionString = GetProductionConnectionString();
+                Console.WriteLine("Using production database connection from DATABASE_URL");
+            }
+            else
+            {
+                // Em desenvolvimento, usa a connection string do appsettings.json
+                connectionString = configuration.GetConnectionString("DefaultConnection");
+                Console.WriteLine("Using development database connection from appsettings.json");
+            }
+
             services.AddDbContext<DbContextClass>(options =>
             {
                 //options.UseNpgsql("host=localhost;user id=postgres;password=123456789;database=Comercial3irmaos;Pooling=false;Timeout=300;CommandTimeout=300;");
                 //options.UseNpgsql("host=89.117.146.50;user id=postgres;password=7A24Jdp1Rcyv;database=ComercialHomolog;Pooling=false;Timeout=300;CommandTimeout=300;");
                 //options.UseNpgsql("host=localhost;user id=postgres;password=admin;database=4Axon;Pooling=false;Timeout=300;CommandTimeout=300;");
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
+                options.UseNpgsql(connectionString,
                     b =>
                     {
                         b.UseNodaTime();
@@ -43,6 +62,39 @@ namespace Infrastructure.ServiceExtension
             services.AddScoped<IClientEvaluationRepository, ClientEvaluationRepository>();
             services.AddScoped<IOtpRepository, OtpRepository>();
             return services;
+        }
+        private static string GetProductionConnectionString()
+        {
+            // DATABASE_URL é injetado automaticamente pelo Digital Ocean App Platform
+            // Formato: postgresql://user:password@host:port/database
+            var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+            if (string.IsNullOrEmpty(databaseUrl))
+            {
+                throw new InvalidOperationException("DATABASE_URL environment variable not found. This is required in production.");
+            }
+
+            return ConvertDatabaseUrlToNpgsql(databaseUrl);
+        }
+
+        private static string ConvertDatabaseUrlToNpgsql(string databaseUrl)
+        {
+            try
+            {
+                var uri = new Uri(databaseUrl);
+                var userInfo = uri.UserInfo.Split(':');
+
+                var username = userInfo[0];
+                var password = userInfo[1];
+                var database = uri.AbsolutePath.TrimStart('/');
+
+                // Configurações específicas para Digital Ocean Managed Database
+                return $"Host={uri.Host};Port={uri.Port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=100;Connection Lifetime=300;";
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to parse DATABASE_URL: {databaseUrl}", ex);
+            }
         }
     }
 }
