@@ -41,9 +41,6 @@ namespace Infrastructure.ServiceExtension
 
             services.AddDbContext<DbContextClass>(options =>
             {
-                //options.UseNpgsql("host=localhost;user id=postgres;password=123456789;database=Comercial3irmaos;Pooling=false;Timeout=300;CommandTimeout=300;");
-                //options.UseNpgsql("host=89.117.146.50;user id=postgres;password=7A24Jdp1Rcyv;database=ComercialHomolog;Pooling=false;Timeout=300;CommandTimeout=300;");
-                //options.UseNpgsql("host=localhost;user id=postgres;password=admin;database=4Axon;Pooling=false;Timeout=300;CommandTimeout=300;");
                 options.UseNpgsql(connectionString,
                     b =>
                     {
