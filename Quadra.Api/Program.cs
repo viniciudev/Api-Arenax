@@ -39,8 +39,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
-// Configuração do Firebase
-FirebaseInitializer.Initialize(builder.Configuration);
+
 
 // Registro do serviço de notificação
 builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationService>();
@@ -116,6 +115,8 @@ builder.Services.Configure<FormOptions>(options =>
 });
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
+// Configuração do Firebase
+FirebaseInitializer.Initialize(builder.Configuration);
 app.MigrateDatabase();
 app.UseStaticFiles(); // Isso serve arquivos de wwwroot
 // Configure the HTTP request pipeline.
