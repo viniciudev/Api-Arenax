@@ -19,7 +19,17 @@ namespace Infrastructure.ServiceExtension
             if (environment.IsProduction())
             {
                 // Em produção, usa a DATABASE_URL do Digital Ocean App Platform
-                connectionString = GetProductionConnectionString();
+                connectionString = GetProductionConnectionStringSafely();
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    // Se não tem DATABASE_URL, usa a connection string do appsettings como fallback
+                    connectionString = configuration.GetConnectionString("DefaultConnection");
+                    Console.WriteLine("WARNING: DATABASE_URL not found, using fallback connection string");
+                }
+                else
+                {
+                    Console.WriteLine("Using production database connection from DATABASE_URL");
+                }
                 Console.WriteLine("Using production database connection from DATABASE_URL");
             }
             else
@@ -63,6 +73,28 @@ namespace Infrastructure.ServiceExtension
             services.AddScoped<IClientEvaluationRepository, ClientEvaluationRepository>();
             services.AddScoped<IOtpRepository, OtpRepository>();
             return services;
+        }
+
+        private static string GetProductionConnectionStringSafely()
+        {
+            try
+            {
+                var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+                // Verifica se é uma variável não substituída (começa com ${)
+                if (string.IsNullOrEmpty(databaseUrl) || databaseUrl.StartsWith("${"))
+                {
+                    Console.WriteLine($"DATABASE_URL not available or not substituted: {databaseUrl ?? "null"}");
+                    return null;
+                }
+
+                return ConvertDatabaseUrlToNpgsql(databaseUrl);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting production connection string: {ex.Message}");
+                return null; // Retorna null em vez de lançar exceção
+            }
         }
         private static string GetProductionConnectionString()
         {

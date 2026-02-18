@@ -121,7 +121,33 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
 // Configuração do Firebase
 FirebaseInitializer.Initialize(builder.Configuration);
-app.MigrateDatabase();
+if (app.Environment.IsProduction())
+{
+    try
+    {
+        // Verifica se DATABASE_URL existe e foi substituída
+        var dbUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        if (!string.IsNullOrEmpty(dbUrl) && !dbUrl.StartsWith("${"))
+        {
+            Console.WriteLine("Applying migrations in production...");
+            app.MigrateDatabase();
+        }
+        else
+        {
+            Console.WriteLine("Skipping migrations: DATABASE_URL not available");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not apply migrations: {ex.Message}");
+        // Não derruba a aplicação se não conseguir aplicar migrations
+    }
+}
+else
+{
+    // Em desenvolvimento, aplica migrations normalmente
+    app.MigrateDatabase();
+}
 app.UseStaticFiles(); // Isso serve arquivos de wwwroot
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
