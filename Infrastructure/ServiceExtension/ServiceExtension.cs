@@ -39,6 +39,7 @@ namespace Infrastructure.ServiceExtension
                     {
                         b.UseNodaTime();
                         b.MigrationsAssembly("Infrastructure");
+                        b.MigrationsHistoryTable("__EFMigrationsHistory", "public");
                     });
 
             });
